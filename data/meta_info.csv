@@ -1,0 +1,67 @@
+﻿Patient;Sample;Sample source;Days of Ibrutinib Treatment ;Therapeutic sensitivity;Ibrutinib sensitivity;Date of Ibrutinib relapse;Days of CAR T Treatment ;CAR T senstivity;Sample
+Patient V;V0;BM;-11;Ibrutinib naïve;S;;;;V0
+Patient V;V1;PB;-11;Ibrutinib naïve;S;;;;V1
+Patient V;V2;PB;2;Ibrutinib sensitive ;S;;;;V2
+Patient V;V3;PB;24;Ibrutinib sensitive ;S;;;;V3
+Patient V;V4;PB;35;Ibrutinib sensitive ;S;;;;V4
+Patient V;V5;PB;59;Ibrutinib sensitive ;S;;;;V5
+Patient V;V6;PB;92;Ibrutinib sensitive ;S;;;;V6
+Patient C;C1;PB;-7;Ibrutinib naïve;S;;;;C1
+Patient C;C2;PB;1;Ibrutinib sensitive ;S;;;;C2
+Patient C;C4;PB;21;Ibrutinib sensitive ;S;;;;C4
+Patient C;C6;PB;60;Ibrutinib sensitive ;S;;;;C6
+Patient D;D1;PB;-11;Ibrutinib naïve;S;;;;D1
+Patient D;D2;BM;-7;Ibrutinib naïve;S;;;;D2
+Patient D;D4;BM;147;Ibrutinib sensitive ;S;;;;D4
+Patient D;D5;PB;147;Ibrutinib sensitive ;S;;;;D5
+Patient B;B0;BM;-202;Ibrutinib naïve;R;;;;B0
+Patient B;B1;PB;-203;Ibrutinib naïve;R;;;;B1
+Patient B;B4;PB;354;Ibrutinib resistant;R;262;;;B4
+Patient E;E1;PB;-3;Ibrutinib naïve;R;;;;E1
+Patient E;E2;PB;47;Ibrutinib resistant;R;21;;;E2
+Patient E;E3;PB;75;Ibrutinib resistant;R;49;;;E3
+Patient T;T1;PB;NA;Ibrutinib naïve;Unknown;;;;L1 (T1)
+Patint U;U1;PB;NA;Ibrutinib naïve;Unknown;;;;L2 (U1)
+Patient X;X1;PB;-2;Ibrutinib naïve;S;;;;L4 (X1, -2d)
+Patint W;W1;PB;980;Ibrutinib relapsed;R;912;;;L3 (W1, 980d)
+Patient A;A3;LN;81;;R;167;81;R;A3 (81d, LN)
+Patient A;A4;PB;84;;R;170;84;R;A4 (84d)
+Patient F;F1;PB;-58;;R;98;-58;S;F1 (-58d)
+Patient F;F2;PB;196;;R;352;196;S;F2 (196d)
+Patient F;F3;PB;334;;R;490;334;R;F3 (334d)
+Patient G;G1;PB;-1;;R;43;-1;S;G1 (-1d)
+Patient G;G2;PB;420;;R;464;420;R;G2 (420d)
+Patient H;H1;PB;-63;;R;0;-63;S;H1 (-63d)
+Patient H;H2;PB;167;;R;230;167;S;H2 (167d)
+Patient I;I1;PB;-91;;R;74;-91;S;I1 (-91d)
+Patient I;I2;Spleen;-63;;R;102;-63;S;I2 (-63d, spleen)
+Patient I;I3;PB;57;;R;222;57;S;I3 (57d)
+Patient J;J1;PB;-35;;R;0;-35;S;J1 (-35d)
+Patient J;J2;PB;28;;R;63;28;S;J2 (28d)
+Patient J;J3;PB;182;;R;217;182;S;J3 (182d)
+Patient K;K0;BM;-95;;R;1;-95;S;K0 (-95d, BM)
+Patient K;K1;PB;-39;;R;84;-39;S;K1 (-39d)
+Patient K;K3;PB;59;;R;155;59;S;K3 (59d)
+Patient L;L1;PB;-30;;R;539;-30;S;L3 (-30d)
+Patient L;L2;PB;55;;R;624;55;R;L4 (55d)
+Patient L;L3;BM;55;;R;624;55;R;L5 (55d, BM)
+Patient M;M0;PB;-193;;R;0;-193;S;M0 (-193d)
+Patient M;M4;PB;965;;R;1158;965;R;M4 (965d)
+Patient N;N1;PB;-6;;R;0;-6;S;N1 (-6d)
+Patient N;N2;PB;28;;R;34;28;S;N2 (28d)
+Patient N;N3;PB;460;;R;466;460;S;N3 (460d)
+Patient O;O1;PB;-56;;R;302;-56;S;O1 (-56d)
+Patient O;O3;PB;28;;R;386;28;S;O3 (28d)
+Patient O;O4;PB;60;;R;418;60;S;O4 (60d)
+Patient O;O5;PB;278;;R;636;278;S;O5 (278d)
+Patient P;P1;PB;-39;;R;-32;-39;S;P1 (-39d)
+Patient P;P2;PB;26;;R;33;26;S;P2 (26d)
+Patient Q;Q2;PB;55;;R;147;55;S;Q2 (55d)
+Patient Q;Q3;PB;89;;R;329;89;S;Q3 (89d)
+Patient Q;Q4;PB;271;;R;427;271;S;Q4 (271d)
+Patient R;R1;PB;-6;;R;202;-6;R;R1 (-6d)
+Patient R;R2;PB;16;;R;224;16;R;R2 (16d)
+Patient S;S2;PB;3;;R;51;3;S;S2 (3d)
+Patient S;S3;PB;567;;R;615;567;S;S3 (567d)
+PBMC1;Normal_1;PB;;;Normal;;;Normal;Normal_1
+PBMC2;Normal_2;PB;;;Normal;;;Normal;Normal_2
