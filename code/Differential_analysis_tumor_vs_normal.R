@@ -103,12 +103,12 @@ DimPlot(object = subset, reduction = 'umap', group.by = "Ibrutinib.sensitivity")
 
 FeaturePlot(object = subset, features = cancer_genes, reduction = 'umap')
 
-# Run DE analysis ####
+# Run cancer vs normal DE analysis ####
 sce <- as.SingleCellExperiment(subset)
 sca <- SceToSingleCellAssay(sce)
 
 asplit <- split(rownames(sca@colData), sca@colData$Sample)
-cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 100))))
+cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 20))))
 
 tmp <- sca[,cells]
 ok <- names(which(apply(assays(tmp)[["counts"]], 1, function(x) sum(x > 0)) > 50))
@@ -119,3 +119,16 @@ res <- zlm( ~ tumor + (1|tumor:patient),
             method='glmer', ebayes=FALSE)
 tmp <- summary(res)$datatable
 
+
+# 
+
+library(limma)
+
+genes <- names(which(rowMeans(counts[, cells]) > 0.1))
+
+design <- model.matrix( ~ tumor, sca@colData[cells,])
+vobj <- voom(counts[genes, cells], design, plot=FALSE)
+dupcor <- duplicateCorrelation(vobj, design, block = sca@colData[cells, "patient"])
+fitDupCor <- lmFit(vobj, design, block = sca@colData[cells, "patient"], correlation = dupcor$consensus)
+fitDupCor <- eBayes(fitDupCor)
+res <- topTable(fitDupCor, number = nrow(vobj))
