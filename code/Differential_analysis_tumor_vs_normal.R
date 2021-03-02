@@ -6,6 +6,7 @@ library(sctransform)
 library(MAST)
 library(scater)
 library(pheatmap)
+library(reshape2)
 
 # Load data ####
 setwd("/Users/lukas.simon/OneDrive/Miko/UTHealth/projects/Wang_collab/")
@@ -112,11 +113,11 @@ sca <- SceToSingleCellAssay(sce)
 asplit <- split(rownames(sca@colData), sca@colData$Sample)
 good <- names(which(unlist(lapply(asplit, length)) > 20))
 asplit <- asplit[good]
-cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 100))))
+cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 200))))
 
 # Subset to genes detected in more than 10% of cells in at least 2 samples
 freq_detected <- do.call(cbind, lapply(asplit, function(x) apply(assays(sca)[["counts"]][, x], 1, function(y) mean(y > 0))))
-ok <- which(apply(freq_detected, 1, function(x) sum(x > 0.2)) >= 2)
+ok <- names(which(apply(freq_detected, 1, function(x) sum(x > 0.2)) >= 2))
 
 # Run mixed model with random effect (taken from https://github.com/kdzimm/PseudoreplicationPaper/blob/c3059a3b361e89bde595f222757d04b89f77eb62/Power/Power.Rmd#L60)
 # takes ~ 40min
@@ -136,6 +137,7 @@ fcHurdle <- merge(summaryDt[summaryDt$contrast=='tumoryes'
                             & summaryDt$component=='H', c(1,4)],
                   by = 'primerid')
 fcHurdle <- stats::na.omit(as.data.frame(fcHurdle))
+fcHurdle$fdr <- p.adjust(fcHurdle$`Pr(>Chisq)`, 'fdr')
 fcHurdle <- fcHurdle[sort.list(fcHurdle$`Pr(>Chisq)`),]
 
 # Heatmap of significant genes ####
@@ -155,15 +157,23 @@ pheatmap(means, annotation_col = anno,
          show_rownames = F, show_colnames = T,
          scale = "row", breaks = seq(-2, 2, length = 101))
 
-ggplot(fcHurdle, aes(x = z, y = -log10(`Pr(>Chisq)`))) +
+# Volcano plot of differentially expressed genes ####
+ggplot(fcHurdle, aes(x = coef, y = -log10(`Pr(>Chisq)`))) +
   geom_hex(bins = 50) +
   scale_fill_viridis_c(trans = 'log', breaks = c(1, 10, 100)) +
   geom_vline(xintercept = 0, linetype = 'dashed') +
-  xlim(-20, 20) + ggtitle("Volcano: ~ tumor + (1|patient)") +
+  xlim(-1, 1) + ggtitle("Volcano: ~ tumor + (1|patient)") +
   theme_bw()
 
-flat_dat <- as(sca[sig[1:6],], 'data.table')
-ggplot(flat_dat, aes(x=tumor, y=logcounts,color=tumor)) +
-  facet_wrap(~primerid, scale='free_y') + 
+# Violin plots ####
+sig <- fcHurdle$primerid[1:12]
+flat_dat <- data.frame(tumor = "yes", sample = colnames(freq_detected),
+                       t(freq_detected[sig,]))
+flat_dat$tumor[grep("Normal", flat_dat$sample)] <- "no"
+flat_dat <- melt(flat_dat, id.vars = c("tumor", "sample"))
+ggplot(flat_dat, aes(x=tumor, y=value,color=tumor)) +
+  facet_wrap(~variable, scale='free_y') + 
   ggtitle("DE Genes tumor vs normal") +
-  geom_violin() + theme_bw()
+  geom_boxplot() + geom_point() +
+  theme_bw()
+
