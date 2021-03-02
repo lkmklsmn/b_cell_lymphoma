@@ -5,6 +5,7 @@ library(gridExtra)
 library(sctransform)
 library(MAST)
 library(scater)
+library(pheatmap)
 
 # Load data ####
 setwd("/Users/lukas.simon/OneDrive/Miko/UTHealth/projects/Wang_collab/")
@@ -103,32 +104,53 @@ DimPlot(object = subset, reduction = 'umap', group.by = "Ibrutinib.sensitivity")
 
 FeaturePlot(object = subset, features = cancer_genes, reduction = 'umap')
 
-# Run cancer vs normal DE analysis ####
+# Run cancer vs normal DE analysis using MAST ####
 sce <- as.SingleCellExperiment(subset)
 sca <- SceToSingleCellAssay(sce)
 
+# Subsample to a maximum of 100 cells per patient
 asplit <- split(rownames(sca@colData), sca@colData$Sample)
-cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 20))))
+good <- names(which(unlist(lapply(asplit, length)) > 20))
+asplit <- asplit[good]
+cells <- unlist(lapply(asplit, function(x) sample(x, min(length(x), 100))))
 
-tmp <- sca[,cells]
-ok <- names(which(apply(assays(tmp)[["counts"]], 1, function(x) sum(x > 0)) > 50))
+# Subset to genes detected in more than 10% of cells in at least 2 samples
+freq_detected <- do.call(cbind, lapply(asplit, function(x) apply(assays(sca)[["counts"]][, x], 1, function(y) mean(y > 0))))
+ok <- which(apply(freq_detected, 1, function(x) sum(x > 0.2)) >= 2)
 
-res <- zlm( ~ tumor + (1|tumor:patient),
-            sca = tmp[ok,],
-            exprs_value = 'logcounts',
-            method='glmer', ebayes=FALSE)
-tmp <- summary(res)$datatable
+# Run mixed model with random effect (taken from https://github.com/kdzimm/PseudoreplicationPaper/blob/c3059a3b361e89bde595f222757d04b89f77eb62/Power/Power.Rmd#L60)
+# takes ~ 40min
+system.time(res <- suppressMessages(
+  zlm( ~ tumor + (1|patient),
+       sca = sca[ok, cells],
+       exprs_value = 'logcounts',
+       strictConvergence = F, method='glmer', ebayes=F)))
 
+# Format results into single table
+# Takes ~25min
+system.time(summaryCond <- suppressMessages(summary(res, doLRT='tumoryes')))
+summaryDt <- summaryCond$datatable
+fcHurdle <- merge(summaryDt[summaryDt$contrast=='tumoryes'
+                            & summaryDt$component=='logFC', c(1,7,5,6,8)],
+                  summaryDt[summaryDt$contrast=='tumoryes'
+                            & summaryDt$component=='H', c(1,4)],
+                  by = 'primerid')
+fcHurdle <- stats::na.omit(as.data.frame(fcHurdle))
+fcHurdle <- fcHurdle[sort.list(fcHurdle$`Pr(>Chisq)`),]
 
-# 
+# Heatmap of significant genes ####
+sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-3 & abs(fcHurdle$z) > 4)]
+tmp <- data.matrix(subset@assays$SCT@data[sig, cells])
+tmp <- tmp[, sample(colnames(tmp), 200)]
+pheatmap(tmp, annotation_col = meta[, c("tumor", "patient")],
+         show_rownames = F, show_colnames = F,
+         scale = "row", breaks = seq(-2, 2, length = 101))
 
-library(limma)
+ggplot(fcHurdle, aes(x = z, y = -log10(`Pr(>Chisq)`))) +
+  geom_point() + theme_bw()
 
-genes <- names(which(rowMeans(counts[, cells]) > 0.1))
-
-design <- model.matrix( ~ tumor, sca@colData[cells,])
-vobj <- voom(counts[genes, cells], design, plot=FALSE)
-dupcor <- duplicateCorrelation(vobj, design, block = sca@colData[cells, "patient"])
-fitDupCor <- lmFit(vobj, design, block = sca@colData[cells, "patient"], correlation = dupcor$consensus)
-fitDupCor <- eBayes(fitDupCor)
-res <- topTable(fitDupCor, number = nrow(vobj))
+flat_dat <- as(sca[sig[1:6],], 'data.table')
+ggplot(flat_dat, aes(x=tumor, y=logcounts,color=tumor)) +
+  facet_wrap(~primerid, scale='free_y') + 
+  ggtitle("DE Genes tumor vs normal") +
+  geom_violin() + theme_bw()
