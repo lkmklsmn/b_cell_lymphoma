@@ -139,15 +139,28 @@ fcHurdle <- stats::na.omit(as.data.frame(fcHurdle))
 fcHurdle <- fcHurdle[sort.list(fcHurdle$`Pr(>Chisq)`),]
 
 # Heatmap of significant genes ####
-sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-3 & abs(fcHurdle$z) > 4)]
-tmp <- data.matrix(subset@assays$SCT@data[sig, cells])
-tmp <- tmp[, sample(colnames(tmp), 200)]
-pheatmap(tmp, annotation_col = meta[, c("tumor", "patient")],
-         show_rownames = F, show_colnames = F,
+sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-4 & abs(fcHurdle$z) > 2)]
+reps <- 3
+tmp <- data.matrix(subset@assays$SCT@data[sig, ])
+means <- do.call(cbind, lapply(asplit, function(x){
+  cells <- lapply(1:3, function(y) sample(x, 10))
+  do.call(cbind, lapply(cells, function(y) rowMeans(tmp[,y])))
+}))
+colnames(means) <- unlist(lapply(names(asplit), function(x) paste(x, 1:3, sep = "_")))
+anno <- data.frame(tumor = rep("yes", ncol(means)))
+anno$tumor[grep("Normal", colnames(means))] <- "no"
+anno$patient <- sapply(colnames(means), function(x) substr(x, 0, 1))
+rownames(anno) <- colnames(means)
+pheatmap(means, annotation_col = anno,
+         show_rownames = F, show_colnames = T,
          scale = "row", breaks = seq(-2, 2, length = 101))
 
 ggplot(fcHurdle, aes(x = z, y = -log10(`Pr(>Chisq)`))) +
-  geom_point() + theme_bw()
+  geom_hex(bins = 50) +
+  scale_fill_viridis_c(trans = 'log', breaks = c(1, 10, 100)) +
+  geom_vline(xintercept = 0, linetype = 'dashed') +
+  xlim(-20, 20) + ggtitle("Volcano: ~ tumor + (1|patient)") +
+  theme_bw()
 
 flat_dat <- as(sca[sig[1:6],], 'data.table')
 ggplot(flat_dat, aes(x=tumor, y=logcounts,color=tumor)) +
