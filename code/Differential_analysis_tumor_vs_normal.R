@@ -9,7 +9,6 @@ library(pheatmap)
 library(reshape2)
 
 # Load data ####
-setwd("/Users/lukas.simon/OneDrive/Miko/UTHealth/projects/Wang_collab/")
 seu <- readRDS("data/bbknn_all_genes.rds")
 meta <- seu@meta.data
 meta$Therapeutic.sensitivity <- gsub("Ibrutinib naïve", "Ibrutinib naive", meta$Therapeutic.sensitivity)
@@ -141,7 +140,8 @@ fcHurdle$fdr <- p.adjust(fcHurdle$`Pr(>Chisq)`, 'fdr')
 fcHurdle <- fcHurdle[sort.list(fcHurdle$`Pr(>Chisq)`),]
 
 # Heatmap of significant genes ####
-sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-4 & abs(fcHurdle$z) > 2)]
+load("data/BlueYellowColormaps_V1.RData")
+sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-3 & abs(fcHurdle$z) > 2)]
 reps <- 3
 tmp <- data.matrix(subset@assays$SCT@data[sig, ])
 means <- do.call(cbind, lapply(asplit, function(x){
@@ -155,7 +155,8 @@ anno$patient <- sapply(colnames(means), function(x) substr(x, 0, 1))
 rownames(anno) <- colnames(means)
 pheatmap(means, annotation_col = anno,
          show_rownames = F, show_colnames = T,
-         scale = "row", breaks = seq(-2, 2, length = 101))
+         scale = "row", breaks = seq(-2, 2, length = 257),
+         color = yellow2blue, main = 'Tumor vs normal')
 
 # Volcano plot of differentially expressed genes ####
 ggplot(fcHurdle, aes(x = coef, y = -log10(`Pr(>Chisq)`))) +
