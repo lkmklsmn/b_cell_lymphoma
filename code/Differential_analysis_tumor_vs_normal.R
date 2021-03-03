@@ -73,6 +73,7 @@ colnames(res) <- c("estimate", "pval")
 res$label <- NA
 cancer_genes <- c("CCND1", "MYC", "SOX11", "BTK")
 res[cancer_genes, "label"] <- cancer_genes
+res_bulk <- res
 
 ggplot(res, aes(estimate, -log10(pval), label = label)) + 
   geom_hex(bins = 50) +
@@ -125,10 +126,11 @@ system.time(res <- suppressMessages(
        sca = sca[ok, cells],
        exprs_value = 'logcounts',
        strictConvergence = F, method='glmer', ebayes=F)))
+res_ss <- res
 
 # Format results into single table
 # Takes ~25min
-system.time(summaryCond <- suppressMessages(summary(res, doLRT='tumoryes')))
+system.time(summaryCond <- suppressMessages(summary(res_ss, doLRT='tumoryes')))
 summaryDt <- summaryCond$datatable
 fcHurdle <- merge(summaryDt[summaryDt$contrast=='tumoryes'
                             & summaryDt$component=='logFC', c(1,7,5,6,8)],
@@ -141,7 +143,7 @@ fcHurdle <- fcHurdle[sort.list(fcHurdle$`Pr(>Chisq)`),]
 
 # Heatmap of significant genes ####
 load("data/BlueYellowColormaps_V1.RData")
-sig <- fcHurdle$primerid[which(fcHurdle$`Pr(>Chisq)` < 1e-3 & abs(fcHurdle$z) > 2)]
+sig <- fcHurdle$primerid[which(fcHurdle$fdr < 1e-2 & abs(fcHurdle$z) > 2)]
 reps <- 3
 tmp <- data.matrix(subset@assays$SCT@data[sig, ])
 means <- do.call(cbind, lapply(asplit, function(x){
@@ -163,18 +165,22 @@ ggplot(fcHurdle, aes(x = coef, y = -log10(`Pr(>Chisq)`))) +
   geom_hex(bins = 50) +
   scale_fill_viridis_c(trans = 'log', breaks = c(1, 10, 100)) +
   geom_vline(xintercept = 0, linetype = 'dashed') +
-  xlim(-1, 1) + ggtitle("Volcano: ~ tumor + (1|patient)") +
+  xlim(-1, 1) +
+  ggtitle("Volcano: ~ tumor + (1|patient)") +
+  xlab("Coefficient [tumor/normal]") + ylab("P-value [-log10]") +
   theme_bw()
 
 # Violin plots ####
-sig <- fcHurdle$primerid[1:12]
+sig <- c(head(fcHurdle$primerid[fcHurdle$z > 2]), head(fcHurdle$primerid[fcHurdle$z < -2]))
 flat_dat <- data.frame(tumor = "yes", sample = colnames(freq_detected),
                        t(freq_detected[sig,]))
 flat_dat$tumor[grep("Normal", flat_dat$sample)] <- "no"
 flat_dat <- melt(flat_dat, id.vars = c("tumor", "sample"))
-ggplot(flat_dat, aes(x=tumor, y=value,color=tumor)) +
-  facet_wrap(~variable, scale='free_y') + 
-  ggtitle("DE Genes tumor vs normal") +
+ggplot(flat_dat, aes(x = tumor, y = value, color = tumor)) +
+  facet_wrap(~ variable, scale='free_y', ncol = 6) + 
+  ggtitle("DE Genes tumor vs normal") + ylab("Likelihood of detection") + xlab("") +
   geom_boxplot() + geom_point() +
   theme_bw()
+
+# Enrichment analysis ####
 
