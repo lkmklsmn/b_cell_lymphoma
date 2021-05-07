@@ -4,7 +4,7 @@ library(umap)
 library(ggplot2)
 
 # Load data ####
-seu <- readRDS("/Users/lukas/OneDrive/Miko/THINC/projects/Wang_collab/b_seu.rds")
+seu <- readRDS("../data/b_seu.rds")
 expr <- seu@assays$RNA@scale.data
 meta <- seu@meta.data
 
