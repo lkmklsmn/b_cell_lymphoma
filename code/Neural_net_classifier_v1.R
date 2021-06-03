@@ -33,17 +33,14 @@ y_test <- to_categorical(classes[outcome[test]], 5)
 input <- layer_input(shape = ncol(x_train))
 embedding = input %>% 
   layer_dense(units = 64, activation = 'relu') %>% 
-  #layer_dropout(rate = 0.2) %>% 
-  layer_dense(units = 16, activation = 'relu') %>% 
-  #layer_dropout(rate = 0.1) %>% 
-  layer_dense(units = 4, activation = 'relu') %>% 
-  layer_dense(units = 2, activation = 'relu')
+  layer_dropout(rate = 0.2) %>% 
+  layer_dense(units = 16, activation = 'relu') %>%
+  layer_dropout(rate = 0.1) %>% 
+  layer_dense(units = 16, activation = 'relu') 
   
 get_embedding = keras_model(input, embedding)
 
 final_layer = embedding %>%
-  layer_dense(units = 3, activation = 'relu') %>%
-  layer_dense(units = 3, activation = 'relu') %>%
   layer_dense(units = 5, activation = 'softmax')
 
 model = keras_model(input, final_layer)
@@ -64,25 +61,25 @@ model %>% fit(
 
 # Get predictions ####
 tmp <- rbind(x_test, x_train)
-embedding_coord <- predict(get_embedding, tmp)
 predicted_classes <- predict(model, tmp)
 predicted_classes <- apply(predicted_classes, 1, function(x) which(x == max(x)))
-table(predicted_classes, outcome)
+predicted_classes <- names(classes[predicted_classes])
 
-#uData <- umap(embedding_coord)
+
+table(predicted_classes[match(train, rownames(meta))], outcome[match(train, rownames(meta))])
+
+table(predicted_classes[match(test, rownames(meta))], outcome[match(test, rownames(meta))])
+
+embedding_coord <- predict(get_embedding, tmp)
+uData <- umap(embedding_coord)
 
 tmp <- rbind(data.frame(data = "test", meta[test, ]),
              data.frame(data = "train", meta[train,]))
 
-#aframe <- data.frame(uData$layout, tmp)
-aframe <- data.frame(embedding_coord, tmp)
+aframe <- data.frame(uData$layout, tmp)
+#aframe <- data.frame(embedding_coord, tmp)
 
 ggplot(aframe, aes(X1, X2, color = ibrutinib_sensitivity)) +
   facet_wrap(~ data) +
-  geom_point() +
-  theme_bw()
-
-ggplot(aframe, aes(X1, X2, color = ibrutinib_sensitivity, shape = data)) +
-  facet_wrap(~ibrutinib_sensitivity) +
   geom_point() +
   theme_bw()
