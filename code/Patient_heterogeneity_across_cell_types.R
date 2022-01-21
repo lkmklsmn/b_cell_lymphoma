@@ -68,20 +68,32 @@ calc_per_explained <- function(celltype){
 
 res <- lapply(good_celltypes, calc_per_explained)
 names(res) <- good_celltypes
+res <- lapply(res, na.omit)
 
 aframe <- do.call(rbind, lapply(names(res), function(x) data.frame(celltype = x, var_expl = res[[x]])))
 aframe$tumor <- "no"
 aframe$tumor[aframe$celltype == "Tumor B"] <- "yes"
-
-pvals <- lapply(c("NK", "CD8 T", "CD4 T", "CD16+ Monocytes", "CD14+ Monocytes"), function(x){
-  ktest <- ks.test(res[["Tumor B"]], res[[x]])
-  ktest$p.value  
-})
 
 ggplot(aframe, aes(celltype, var_expl, color = tumor)) +
   geom_boxplot(outlier.shape = NA) +
   scale_y_continuous(limits = quantile(aframe$var_expl, c(0.1, 0.9))) +
   scale_color_manual(values = c("black", "red")) +
   ylab("Sum of squares patient/Total sum of squares") +
-  labs(title = "Patient heterogeneity across cell types", subtitle = paste("KS P:", signif(pvals, 2))) +
+  labs(title = "Patient heterogeneity across cell types") +
   theme_bw()
+
+
+library(ggpubr)
+my_comparisons <- list(c("Tumor B","NK"),
+                       c("Tumor B","CD8 T"),
+                       c("Tumor B","CD4 T"),
+                       c("Tumor B","CD14+ Monocytes"))
+ggplot(aframe, aes(celltype, var_expl, color = tumor)) +
+  geom_boxplot(outlier.shape = NA) +
+  scale_y_continuous(limits = quantile(aframe$var_expl, c(0.1, 0.9))) +
+  scale_color_manual(values = c("black", "red")) +
+  ylab("Sum of squares patient/Total sum of squares") +
+  labs(title = "Patient heterogeneity across cell types") +
+  theme_bw() +
+  stat_compare_means(comparisons = my_comparisons, label.y = 0.025) +
+  stat_compare_means(label.y = 0.025)
