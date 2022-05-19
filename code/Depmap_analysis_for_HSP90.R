@@ -21,18 +21,21 @@ tmp <- lapply(good_tissues, function(x){
   cor(scores[asplit[[x]], ], scores[asplit[[x]], "MYC"])
 })
 
-tmp <- do.call(rbind, lapply(tmp, function(x) rank(x[,1])[genes]))
+tmp <- do.call(rbind, lapply(tmp, function(x) (rank(x[,1])/length(!is.na(x)))[genes]))
 rownames(tmp) <- good_tissues
 
 aframe <- data.frame(primary_disease = good_tissues,
                      tmp)
-aframe$type <- "NA"
+aframe$type <- "other"
 aframe$type[aframe$primary_disease == "Lymphoma"] <- "MCL"
   
 aframe$primary_disease <- factor(aframe$primary_disease,
                                  levels = aframe$primary_disease[order(aframe$HSP90AB1)])
 p_hsp90ab1 <- ggplot(aframe, aes(HSP90AB1, primary_disease, fill = type)) +
   geom_bar(stat = 'identity') +
+  ggtitle("HSP90AB1") +
+  xlab("MYC correlation [%ile]") +
+  ylab("Primary disease") +
   scale_fill_manual(values = c("red", "grey")) +
   theme_bw()
 
@@ -40,12 +43,15 @@ aframe$primary_disease <- factor(aframe$primary_disease,
                                  levels = aframe$primary_disease[order(aframe$HSP90AA1)])
 p_hsp90aa1 <- ggplot(aframe, aes(HSP90AA1, primary_disease, fill = type)) +
   geom_bar(stat = 'identity') +
+  ggtitle("HSP90AA1") +
+  xlab("MYC correlation [%ile]") +
+  ylab("Primary disease") +
   scale_fill_manual(values = c("red", "grey")) +
   theme_bw()
 
 gridExtra::grid.arrange(p_hsp90ab1, p_hsp90aa1, ncol = 2)
 
-# ####
+# MYC vs HSP90 correlation plots ####
 aframe <- data.frame(myc = scores[, "MYC"],
                      hsp90b1 = scores[, "HSP90B1"],
                      hsp90aa1 = scores[, "HSP90AA1"],
@@ -53,26 +59,33 @@ aframe <- data.frame(myc = scores[, "MYC"],
                      sample_info[match(ok, sample_info$DepMap_ID),])
 
 p_hsp90ab1 <- ggplot(aframe[aframe$primary_disease %in% good_tissues,], aes(myc, hsp90ab1)) +
-  facet_wrap(~ primary_disease) +
-  geom_point() +
+  facet_wrap(~ primary_disease, ncol = 3) +
+  geom_point() + geom_smooth(method = lm) +
   xlab("MYC dependency") + ylab("HSP90AB1 dependency") +
   theme_bw()
 
 p_hsp90aa1 <- ggplot(aframe[aframe$primary_disease %in% good_tissues,], aes(myc, hsp90aa1)) +
-  facet_wrap(~ primary_disease) +
-  geom_point() +
+  facet_wrap(~ primary_disease, ncol = 3) +
+  geom_point() + geom_smooth(method = lm) +
   xlab("MYC dependency") + ylab("HSP90AA1 dependency") +
   theme_bw()
 
 gridExtra::grid.arrange(p_hsp90ab1, p_hsp90aa1, ncol = 2)
 
 
-ggplot(aframe[aframe$primary_disease == "Lymphoma",], aes(myc, hsp90ab1)) +
-  facet_wrap(~ primary_disease) +
+p1 <- ggplot(aframe[aframe$primary_disease == "Lymphoma",], aes(myc, hsp90ab1)) +
+  ggtitle("Lymphoma") +
   geom_smooth(method=lm) + geom_point() +
   xlab("MYC dependency") + ylab("HSP90AB1 dependency") +
   theme_bw()
 
+p2 <- ggplot(aframe, aes(myc, hsp90ab1)) +
+  geom_smooth(method=lm) + geom_point() +
+  ggtitle("Pan-cancer") +
+  xlab("MYC dependency") + ylab("HSP90AB1 dependency") +
+  theme_bw()
+
+gridExtra::grid.arrange(p2, p1, ncol = 2)
 ggplot(aframe[aframe$primary_disease == "Lymphoma",], aes(myc, hsp90aa1)) +
   facet_wrap(~ primary_disease) +
   geom_smooth(method=lm) + geom_point() +
@@ -90,7 +103,7 @@ correl <- rev(sort(correl[,1]))[-1]
 plot(density(correl, na.rm = T),
      main = "Across all cell lines",
      xlab = "Pearson correlation with MYC dependency")
-abline(v = correl[c("HSP90AA1")], col = "red")
+#abline(v = correl[c("HSP90AA1")], col = "red")
 abline(v = correl[c("HSP90AB1")], col = "blue")
 
 correl <- cor(scores[cell_lines, ], scores[cell_lines, "MYC"])
@@ -98,5 +111,5 @@ correl <- rev(sort(correl[,1]))[-1]
 plot(density(correl, na.rm = T),
      main = "Across Lymphoma cell lines only",
      xlab = "Pearson correlation with MYC dependency")
-abline(v = correl[c("HSP90AA1")], col = "red")
+#abline(v = correl[c("HSP90AA1")], col = "red")
 abline(v = correl[c("HSP90AB1")], col = "blue")
