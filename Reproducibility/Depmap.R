@@ -7,9 +7,9 @@ library(ggpubr)
 
 # Load data ####
 sample_info <- read.csv("data/depmap/sample_info.csv")
-crispr <- fread("data/depmap/CRISPR_gene_effect.csv", sep = ",")
-scores <- data.matrix(crispr[,-1])
-rownames(scores) <- crispr$DepMap_ID
+cn <- fread("data/depmap/CRISPR_gene_effect.csv", sep = ",")
+scores <- data.matrix(cn[,-1])
+rownames(scores) <- cn$DepMap_ID
 genes <- colnames(scores)
 genes <- unlist(lapply(genes, function(x) strsplit(x, " ",  fixed = T)[[1]][1]))
 colnames(scores) <- genes
@@ -19,6 +19,9 @@ ok <- intersect(sample_info$DepMap_ID, rownames(scores))
 scores <- scores[ok,]
 sample_info <- sample_info[match(ok, sample_info$DepMap_ID),]
 
+# tmp <- sample_info[sample_info$primary_disease == "Lymphoma",]
+# tmp <- tmp[tmp$lineage_sub_subtype=='b_cell_mantle_cell',]
+
 # Calculate correlation between MYC and HSP90AA1/HSP90AB1 ####
 gene1 <- "MYC"
 gene2 <- "HSP90AB1"
@@ -27,20 +30,24 @@ gene2 <- "HSP90AB1"
 asplit <- split(1:nrow(scores), sample_info[, 'primary_disease'])
 good_tissues <- names(which(unlist(lapply(asplit, length)) > 25))
 aframe <- data.frame('gene1' = scores[, gene1],'gene2' = scores[, gene2],sample_info)
+ggplot(aframe[aframe$primary_disease %in% good_tissues,], aes(gene1, gene2)) +
+        geom_point() +geom_smooth(method='lm')+
+        xlab(paste0(gene1," dependency")) + ylab(paste0(gene2," dependency"))+theme_bw()+
+        stat_cor(method = "pearson")+ggtitle("Across all cell lines")
 p1 <- ggplot(aframe[aframe$primary_disease %in% good_tissues,], aes(gene1, gene2)) +
-        facet_wrap(~ primary_disease,ncol = 6) +
-        geom_point() +geom_smooth(method=lm)+
+        facet_wrap(~ primary_disease,scales = 'free') +
+        geom_point() +geom_smooth(method='lm')+
         xlab(paste0(gene1," dependency")) + ylab(paste0(gene2," dependency")) +
         theme_bw()+ggtitle("Across all cell lines")
 library(ggrepel)
-tmp <- aframe[aframe$primary_disease == "Lymphoma" & aframe$Subtype!="",]
-tmp$Subtype[tmp$Subtype=="Diffuse Large B-cell Lymphoma (DLBCL)"] <- "DLBCL"
-tmp$Subtype[tmp$Subtype=="T-cell, Non-Hodgkins, Anaplastic Large Cell (ALCL)"] <- "ALCL"
+tmp <- aframe[aframe$primary_disease == "Lymphoma" & aframe$lineage_sub_subtype!="",]
+tmp$MCL <- "other"
+tmp$MCL[tmp$lineage_sub_subtype=="b_cell_mantle_cell"] <- "MCL"
 p2 <- ggplot(tmp, aes(gene1, gene2)) +
-        geom_smooth() + geom_point(aes(color=Subtype,shape=Subtype)) +
-        geom_label_repel(aes(label=Subtype),size=2,max.overlaps = 3)+
+        geom_smooth() + geom_point(aes(color=MCL,shape=lineage_sub_subtype)) +
+        geom_label_repel(aes(label=lineage_sub_subtype),size=2,max.overlaps = 3)+
         xlab(paste0(gene1," dependency")) + ylab(paste0(gene2," dependency")) +
-        theme_bw()+theme(legend.position = 'none')+
+        theme_bw()+
         stat_cor(method = "pearson")+
         ggtitle("Lymphoma cell lines only")
 
@@ -104,12 +111,9 @@ tmp <- do.call(rbind, lapply(tmp, function(x) rank(x[,1])[genes]))
 rownames(tmp) <- good_tissues
 aframe <- data.frame(subtype = good_tissues,tmp)
 aframe$subtype <- factor(aframe$subtype,
-                                 levels = aframe$subtype[order(aframe$HSP90AB1)])
+                         levels = aframe$subtype[order(aframe$HSP90AB1)])
 p6 <- ggplot(aframe, aes(HSP90AB1, subtype)) +
         geom_bar(stat = 'identity') + scale_fill_manual(values = c("red", "grey")) +
         theme_bw()+ylab("Lymphoma subtypes")+
         ggtitle("Across subtypes of lymphoma cell lines")+
         theme(legend.position = 'none')
-
-
-

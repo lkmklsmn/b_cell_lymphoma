@@ -122,7 +122,8 @@ event$clinical_outcome <- factor(event$clinical_outcome,levels=c("BTKi-S","BTKi-
 library(ggallin)
 library(ggrepel)
 ggplot(event, aes(days, patient,color=clinical_outcome,label = label2)) +
-        scale_x_continuous(trans=pseudolog10_trans)+
+        scale_x_continuous(trans=pseudolog10_trans,
+                           breaks=c(-100,-10,0,10,100,1000))+
         geom_point(aes(shape=group,size=log10(total_cell)))+
         geom_vline(xintercept = 0, linetype = 'dashed') +
         geom_segment(aes(x = min_days, xend = max_days, y = patient, yend = patient), 

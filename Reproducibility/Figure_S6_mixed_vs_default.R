@@ -13,7 +13,7 @@ runSeurat <- function(tmp,features){
         tmp
 }
 
-# Figure S3A ####
+# Figure S6A ####
 # Unsupervised highly variable genes
 seu <- FindVariableFeatures(seu)
 unsuper_genes <- VariableFeatures(seu)
@@ -63,7 +63,7 @@ p3 <- DimPlot(seu,group.by = 'clinical_outcome',
         labs(title="Supervised Mixed model DEGs")
 p1|p2|p3
 
-# Figure S3B ####
+# Figure S6B ####
 good <- names(table(seu$sample))[table(seu$sample)>50]
 sub <- seu[,seu$sample %in% good]
 tmp1 <- RunPCA(sub, features=s)
@@ -84,7 +84,7 @@ p4 <- DimPlot(tmp4,reduction = 'pca',group.by = 'clinical_outcome',
         labs(title="Dual-specific DEGs")+NoLegend()
 (p1|p2)/(p3|p4)
 
-# Figure S3C ####
+# Figure S6C ####
 plot_PCA <- function(tmp){
         df <- data.frame(tmp@reductions$pca@cell.embeddings[,c(1,2)])
         df$sample <- tmp$sample
