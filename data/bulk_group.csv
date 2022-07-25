@@ -1,0 +1,27 @@
+11,DMSO_1
+12,DMSO_2
+13,DMSO_3
+21,AZD 2.5nM_1
+22,AZD 2.5nM_2
+23,AZD 2.5nM_3
+31,AZD 5nM_1
+32,AZD 5nM_2
+33,AZD 5nM_3
+41,Zela 0.2uM_1
+42,Zela 0.2uM_2
+43,Zela 0.2uM_3
+51,Zela 0.4uM_1
+52,Zela 0.4uM_2
+53,Zela 0.4uM_3
+61,Tane 0.5uM_1
+62,Tane 0.5uM_2
+63,Tane 0.5uM_3
+71,Tane 1.0uM_1
+72,Tane 1.0uM_2
+73,Tane 1.0uM_3
+81,AZD(5)+Zela (0.2)_1
+82,AZD(5)+Zela (0.2)_2
+83,AZD(5)+Zela (0.2)_3
+91,AZD(5)+Tane (0.5)_1
+92,AZD(5)+Tane (0.5)_2
+93,AZD(5)+Tane (0.5)_3
