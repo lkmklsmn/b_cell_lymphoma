@@ -12,9 +12,9 @@ library(WebGestaltR)
 # data <- data[,-ncol(data)]
 # data <- data[rowSums(data)>0,]
 # write.table(data,"counts.csv",sep=",",row.names = T,col.names = T,quote=F)
-data <- read.csv("../counts.csv",row.names=1)
+data <- read.csv("../data/counts.csv",row.names=1)
 data <- data[rowSums(data)>0,]
-group <- read.csv("../group.csv",header = F)[,2]
+group <- read.csv("../data/group.csv",header = F)[,2]
 colnames(data) <- group
 
 condition <- unlist(lapply(colnames(data),function(x){
