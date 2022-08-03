@@ -3,6 +3,7 @@ library("Seurat")
 library(ggplot2)
 library(dplyr)
 library(pheatmap)
+library(zoo)
 load("/Users/yanfangfang/BlueYellowColormaps_V1.RData")
 b_seu <- readRDS("data/integrated_b_cells.rds")
 good <- names(table(b_seu$sample))[(table(b_seu$sample)>20)]
@@ -40,7 +41,7 @@ de_genes <- c(s,slow,r,dual)
 
 # Heatmap ####
 tmp <- b_seu[,b_seu$chemistry=="3prime"]
-tmp <- ScaleData(b_seu,features = de_genes)
+tmp <- ScaleData(tmp,features = de_genes)
 asplit_cells <- split(rownames(tmp@meta.data), tmp$sample)
 len <- unlist(lapply(asplit_cells,length))
 good <- names(len)[len>50]
@@ -52,17 +53,19 @@ means <- do.call(cbind, lapply(asplit_cells, function(x){
         cbind(s1, s2, s3)
 }))
 sample <- unlist(lapply(names(asplit_cells), function(x) rep(x, 3)))
-anno_col <- data.frame(sample,"chemistry"=tmp@meta.data[match(sample,tmp$sample),'chemistry'],
+anno_col <- data.frame(sample,"Cohort"=tmp@meta.data[match(sample,tmp$sample),'chemistry'],
                        "clinical_outcome"=tmp@meta.data[match(sample,tmp$sample),'clinical_outcome'])
 rownames(anno_col) <- colnames(means) <- paste(colnames(means), sample)
 anno_col <- arrange(anno_col,factor(clinical_outcome,
                                     levels=c("Normal","BTKi-Fast","BTKi-Slow","BTKi-R","Dual-R")))
-anno_col$chemistry <- "Cohort1"
+lst <- unique(anno_col$sample)
+anno_col$sample <- factor(anno_col$sample,levels=lst)
+anno_col$Cohort <- "BTKi cohort"
 annotation_colors = list(
         clinical_outcome = c(Normal="darkgrey",'BTKi-Fast'="steelblue",
                               'BTKi-Slow'="lightblue2",'BTKi-R'="peachpuff4",
                               'Dual-R'="chocolate2"),
-        chemistry=c(Cohort1="#F8766D"),
+        Cohort=c('BTKi cohort'="#F8766D"),
         DEGs=c('BTKi-Fast-specific'="steelblue",'BTKi-Slow-specific'="lightblue2",
                'BTKi-R-specific'="peachpuff4",'Dual-R-specific'="chocolate2")
 )
@@ -78,7 +81,6 @@ pheatmap(means[,rownames(anno_col)],cluster_rows = F, cluster_cols = F, scale = 
          main="Outcome-specific differentially expressed genes (DEGs)") 
 
 # Figure 4B ####
-tmp <- b_seu
 tmp <- ScaleData(tmp,features=rownames(tmp))
 expr <- tmp@assays$RNA@scale.data
 meta <- tmp@meta.data
@@ -146,23 +148,37 @@ pheatmap(means[,rownames(anno_col)],cluster_rows = F, cluster_cols = F, scale = 
          main="Dual vs IBN-R across both cohorts") 
 
 # Figure 4D ####
-create_plot <- function(x){
+create_plot_cell_level <- function(gene = "CDK9"){
+        tmp <- ScaleData(tmp,features = x)
+        meta <- tmp@meta.data
+        aframe <- data.frame(meta, expr = t(tmp@assays$RNA@scale.data))
+        aframe <- arrange(aframe,factor(clinical_outcome,
+                                        levels=c("BTKi-R","Dual-R")))
+        lst <- unique(aframe$sample)
+        aframe$chemistry <- as.factor(aframe$chemistry)
+        levels(aframe$chemistry) <- c("BTKi cohort","CAR-T cohort")
+        ggplot(aframe, aes(factor(sample,levels=lst), expr, group = sample, fill = clinical_outcome)) +
+                geom_boxplot(outlier.size = 0.2) +
+                scale_fill_manual(values=c("peachpuff4","chocolate2"))+
+                ylab("Expression levels") +ggtitle(paste0(x," expression"))+
+                theme_bw()+xlab("sample") +
+                theme(axis.text.x = element_text(size=8, angle=45),axis.title.x =element_blank(),
+                      axis.title.y=element_blank())+
+                facet_wrap(~chemistry,scales = "free")
+}
+create_plot_10cell_level <- function(x){
         tmp <- ScaleData(tmp,features = x)
         meta <- tmp@meta.data
         expr <- t(tmp@assays$RNA@scale.data)
         df <- do.call(rbind,lapply(unique(meta$sample),function(x){
                 sample <- rownames(meta)[meta$sample==x]
-                n <- ceiling(length(sample)/10)
-                asplit <- split(sample,cut(1:length(sample),n,label=F))
-                do.call(rbind,lapply(asplit,function(y){c(x,round(mean(expr[y,1]),2))}))
+                data.frame(sample=x,expr=rollapply(expr[sample,1],10,by=10,mean))
         }))
         df <- data.frame(df)
-        colnames(df) <- c("sample","expr")
-        df$expr <- as.numeric(df$expr)
         df$clinical_outcome <- meta[match(df$sample,meta$sample),'clinical_outcome']
         df$cohort <- meta[match(df$sample,meta$sample),'chemistry']
         df$cohort <- as.factor(df$cohort)
-        levels(df$cohort) <- c("Cohort1","Cohort2")
+        levels(df$cohort) <- c("BTKi cohort","CAR-T cohort")
         df <- arrange(df,factor(clinical_outcome,levels=c("BTKi-R","Dual-R")))
         lst <- unique(df$sample)
         ggplot(df, aes(factor(sample,levels=lst), expr, fill = clinical_outcome)) +
@@ -172,11 +188,33 @@ create_plot <- function(x){
                 theme_bw()+xlab("Clinical outcome") +
                 theme(axis.text.x = element_text(size=6, angle=45,h=1),axis.title.x = element_blank())+
                 ggtitle(paste0(x," expression"))+
-                stat_compare_means(comparisons = list(c("BTKi-R","Dual-R")))+
                 facet_wrap(~cohort,scales = "free")
 }
-create_plot('PRMT2') ->p1
-create_plot('SLC25A22') ->p2
+create_plot_sample_level <- function(x){
+        tmp <- ScaleData(tmp,features = x)
+        meta <- tmp@meta.data
+        expr <- t(tmp@assays$RNA@scale.data)
+        expr_mean <- unlist(lapply(unique(meta$sample),function(x){
+                mean(expr[rownames(meta)[meta$sample==x],])
+        }))
+        df <- data.frame(expr=expr_mean,sample=unique(meta$sample))
+        df$clinical_outcome <- meta[match(df$sample,meta$sample),'clinical_outcome']
+        df$cohort <- meta[match(df$sample,meta$sample),'chemistry']
+        df$cohort <- as.factor(df$cohort)
+        levels(df$cohort) <- c("Cohort1","Cohort2")
+        df <- arrange(df,factor(clinical_outcome,levels=c("BTKi-R","Dual-R")))
+        ggplot(df, aes(clinical_outcome, expr, fill = clinical_outcome)) +
+                geom_boxplot()+geom_point()+
+                scale_fill_manual(values=c("peachpuff4","chocolate2"))+
+                ylab("Relative expression") +
+                theme_bw()+xlab("Clinical outcome") +
+                theme(axis.text.x = element_text(size=6, angle=45,h=1),axis.title.x = element_blank())+
+                ggtitle(paste0(x," expression"))+
+                #stat_compare_means(comparisons = list(c("BTKi-R","Dual-R")))+
+                facet_wrap(~cohort,scales = "free")
+}
+create_plot_10cell_level('CDK9') ->p1
+create_plot_10cell_level('POLR2C') ->p2
 p1/p2
 
 # Figure 4E ####
@@ -193,12 +231,12 @@ tmp$geneSet <- gsub("HALLMARK_","",tmp$geneSet)
 library(tidytext)
 library(dplyr)
 tmp %>% mutate(geneSet = reorder_within(geneSet,EnrichmentScore, contrast)) %>%
-        ggplot(aes(y=geneSet,x=EnrichmentScore))+geom_bar(stat="identity")+
+        ggplot(aes(y=geneSet,x=EnrichmentScore))+geom_bar(stat="identity",fill='steelblue')+
         scale_y_reordered() +
         facet_wrap(~contrast,scales="free",ncol=1)+theme_bw()+ggtitle("Enriched pathways")+
         theme(axis.title.y =element_blank())
 
-# Figure 4G ####
+# Figure 4F ####
 tmp <- read.delim("/Users/yanfangfang/h.all.v7.4.symbols.gmt",header = F,fill = NA)
 rownames(tmp) <- tmp$V1
 tmp <- tmp[,-c(1,2)]
@@ -236,7 +274,7 @@ df3 <- data.frame(pathway="MYC_TARGETS_V2",expression=MYC_TARGETS_V2,
 df <- rbind(df1,df2,df3)
 ggplot(df, aes(x=factor(clinical_outcome,levels=c("Normal","BTKi-Fast","BTKi-Slow","BTKi-R","Dual-R")), 
                y=expression,fill=pathway)) + 
-        geom_violin(outlier.shape=NA)+ylim(0,6)+
+        geom_boxplot(outlier.shape=NA)+ylim(0,6)+
         xlab("Clinical outcome")+ylab("Average pathway score")+
         ggtitle("Average expression of MYC and OXPHOS pathways")+
         theme_bw()+geom_hline(yintercept = 1,linetype="dashed")
