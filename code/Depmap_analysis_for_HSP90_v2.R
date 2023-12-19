@@ -94,6 +94,44 @@ p_box <- plot_tertiles_tissue(gene = "HSP90AB1", tissue = "Lymphoma", refgene = 
 # Compile into single plot ####
 grid.arrange(p_pan, p_lym, p_box, ncol = 3)
 
+# Highlight specific cell lines in barplots ####
+aframe <- data.frame(kronos[, c("MYC", "HSP90AB1")],
+                     sample_info[rownames(kronos),])
+aframe <- aframe[aframe$primary_disease == "Lymphoma", ]
+
+aframe$split <- cut(aframe[, "MYC"],
+                    breaks=c(quantile(aframe[, "MYC"],
+                                      probs = seq(0, 1, length = 4))),
+                    labels = c("low", "int", "high"), include.lowest = TRUE)
+aframe$split <- gsub("low", "dependent", aframe$split)
+aframe$split <- gsub("high", "independent", aframe$split)
+aframe$split <- factor(aframe$split, levels = c("dependent", "int", "independent"))
+aframe$cnv <- cnv[match(rownames(aframe), rownames(cnv)), "MYC"]
+
+tmp <- aframe[, c("cnv", "MYC", "HSP90AB1", "split", "stripped_cell_line_name")]
+tmp <- tmp[order(tmp$split, tmp$HSP90AB1), ]
+head(tmp)
+tail(tmp)
+
+cell_lines <- c("C8166", "HDMYZ", "OCILY19", "A3KAW", "SMZ1", "RAJI")
+
+aframe <- aframe[aframe$stripped_cell_line_name %in% cell_lines, ]
+aframe$stripped_cell_line_name <- factor(aframe$stripped_cell_line_name,
+                                         levels = cell_lines)
+
+ggplot(aframe) +
+  labs(y = "HSP90AB1 dependency",
+       x = "Cell lines") +
+  geom_bar(aes(x = stripped_cell_line_name, y = HSP90AB1, fill = split),
+           stat = "identity") +
+  scale_fill_manual(values = c("red", "black"), name = "MYC") +
+  theme_classic() +
+  theme(axis.text.x=element_text(angle = 45, vjust = 0.5))
+ggsave(
+  filename = "/Users/lukas/OneDrive/Documents/GitHub/b_cell_lymphoma/figs/HSP90AB1_cell_lines.pdf",
+  width = 4, height = 4)
+
+
 # Download TCGA DLBC expression ####
 query <- GDCquery(
   project = "TCGA-DLBC",
